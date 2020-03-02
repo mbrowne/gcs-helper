@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -59,6 +60,7 @@ func (h *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	fmt.Println("r.URL.Path", r.URL.Path)
 	if r.URL.Path == "/" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -89,6 +91,30 @@ func (h *proxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer gcsResp.Body.Close()
+
+	// If there is an IndexFilename configured (e.g. index.html),
+	// try the IndexFilename if the file is not found.
+	indexFilename := h.config.IndexFilename
+	if indexFilename != "" && !strings.HasSuffix(url, "/"+indexFilename) && gcsResp.StatusCode == 404 {
+		if !strings.HasSuffix(url, "/") {
+			url += "/"
+		}
+		url += indexFilename
+
+		h.logger.Debug("File not found; trying " + url)
+		gcsReq, err = http.NewRequest(r.Method, url, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		gcsResp, err = h.hc.Do(gcsReq)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer gcsResp.Body.Close()
+	}
 
 	for name, values := range gcsResp.Header {
 		for _, value := range values {

@@ -16,12 +16,13 @@ import (
 // Config represents the gcs-helper configuration that is loaded from the
 // environment.
 type Config struct {
-	Listen     string `default:":8080"`
-	BucketName string `envconfig:"BUCKET_NAME" required:"true"`
-	LogLevel   string `envconfig:"LOG_LEVEL" default:"debug"`
-	Client     ClientConfig
-	Map        MapConfig
-	Proxy      ProxyConfig
+	Listen        string `default:":8080"`
+	BucketName    string `envconfig:"BUCKET_NAME" required:"true"`
+	LogLevel      string `envconfig:"LOG_LEVEL" default:"debug"`
+	IndexFilename string `envconfig:"INDEX_FILENAME"`
+	Client        ClientConfig
+	Map           MapConfig
+	Proxy         ProxyConfig
 }
 
 func (c Config) Logger() *logrus.Logger {
